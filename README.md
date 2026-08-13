@@ -1,79 +1,77 @@
-# React TypeScript Learning Template
+# React + TypeScript + Vite
 
-![React](https://img.shields.io/badge/React-18+-61DAFB?style=flat-square&logo=react&logoColor=black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-3-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat-square&logo=vite&logoColor=white)
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-> Repo ini dibuat sebagai template & playground untuk belajar React dengan TypeScript.
-> Cocok banget buat nyoba-nyoba konsep, bikin eksperimen, atau sekadar tempat corat-coret kode sembari belajar.
+Currently, two official plugins are available:
 
-## Fitur & Teknologi
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-- ⚛️ **React** — component-based UI
-- 🦕 **TypeScript** — type safety, biar kode lebih terprediksi
-- ⚡ **Vite** — dev server super cepat, hot reload
-- 🎨 **Tailwind CSS** — styling utility-first tanpa nulis CSS manual
+## React Compiler
 
-## Topik Belajar
+The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
 
-Checklist di bawah bisa dicentang seiring progres belajar:
+Note: This will impact Vite dev & build performances.
 
-### Dasar React dengan TypeScript
+## Expanding the ESLint configuration
 
-- [ ] JSX dan cara kerjanya
-- [ ] Components (functional component)
-- [ ] Props — typing props dengan `interface`/`type`
-- [ ] State — `useState`
-- [ ] Rendering bersyarat & lists
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-### React Hooks
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-- [ ] `useState`
-- [ ] `useEffect`
-- [ ] `useMemo` & `useCallback`
-- [ ] `useRef`
-- [ ] Membuat custom hooks
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
 
-### Styling dengan Tailwind CSS
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 
-- [ ] Utility classes dasar (spacing, typography, color)
-- [ ] Responsive design (`sm:`, `md:`, `lg:`)
-- [ ] Dark mode
-- [ ] Component styling pattern
-
-### React Router
-
-- [ ] Setup routes & navigation
-- [ ] Dynamic routes (params)
-- [ ] Nested routes
-- [ ] Link & NavLink
-
-### Fetching Data & API
-
-- [ ] Fetch data dari REST API dengan `fetch`
-- [ ] Typing response API dengan TypeScript
-- [ ] Loading & error state
-- [ ] Abort controller & cleanup
-
-## Cara Menjalankan
-
-Project ini menggunakan **Bun** sebagai package manager.
-
-```bash
-# install dependencies
-bun install
-
-# jalankan dev server
-bun run dev
-
-# build untuk production
-bun run build
-
-# preview hasil build
-bun run preview
 ```
 
-## Lisensi
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-Template belajar, bebas dipakai & dimodifikasi. Selamat belajar! 🚀
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+
+```
