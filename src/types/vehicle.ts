@@ -1,10 +1,10 @@
 export interface Category {
-  id?: string | number;
+  id: string;
   name: string;
 }
 
 export interface Vehicle {
-  id: string | number;
+  id: string;
   name: string;
   brand: string;
   plateNumber: string;
@@ -14,10 +14,11 @@ export interface Vehicle {
   isAvailable?: boolean;
 }
 
+// Digunakan khusus untuk payload Form Tambah Kendaraan (POST)
 export interface VehicleFormData {
   name: string;
   brand: string;
   plateNumber: string;
   transmission: 'MANUAL' | 'AUTOMATIC';
-  categoryName: string;
+  categoryId: string;
 }

@@ -1,39 +1,82 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { type Vehicle } from './types/vehicle';
+import { type Vehicle, type VehicleFormData } from './types/vehicle';
 import { VehicleForm } from './components/VehicleForm';
 import { VehicleCard } from './components/VehicleCard';
+
+// ⚠️ PASTE TOKEN DARI https://rent-car-pkl.linkbee.id/token.html DI SINI
+const ADMIN_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI5ODc0NmQyMC1lZTZjLTQzMjUtYWEwOC1lYzg2N2IxODM0ZmUiLCJlbWFpbCI6ImFkbWluQHJlbnRjYXIuY29tIiwiaWF0IjoxNzg2Njg5NDA3LCJleHAiOjE3ODY2OTAzMDd9.kG9ERfjO8TGlgROOdHIh_RdcOlN-IxFoaZXzo4zf_QE";
 
 export function App() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-useEffect(() => {
-  const fetchVehicles = async () => {
+  // 1. Fungsi Fetching Data di luar useEffect agar dapat dipanggil ulang (re-fetch)
+  const fetchVehicles = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       const response = await axios.get('https://rent-car-pkl.linkbee.id/api/vehicles');
-      
-      // Ambil array dari response.data atau response.data.data
-      const resultData = Array.isArray(response.data) 
-        ? response.data 
-        : (response.data?.data || []);
-
+      const resultData = Array.isArray(response.data) ? response.data : (response.data?.data || []);
       setVehicles(resultData);
-    } catch (err) {
+    } catch {
       setError('Gagal mengambil data kendaraan dari server. Silakan coba lagi.');
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  // Memanggil fetchVehicles saat awal komponen di-mount
+  useEffect(() => {
+    fetchVehicles();
+  }, [fetchVehicles]);
+
+  // 2. Handler untuk POST data baru ke API
+  const handleAddVehicle = async (formData: VehicleFormData) => {
+    try {
+      await axios.post(
+        'https://rent-car-pkl.linkbee.id/api/vehicles',
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${ADMIN_TOKEN}`,
+          },
+        }
+      );
+
+      // Re-fetch otomatis setelah berhasil POST
+      await fetchVehicles();
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
+        const message = err.response.data?.message || 'Gagal menambahkan kendaraan baru.';
+        alert(`Gagal: ${message}`);
+      } else {
+        alert('Terjadi kesalahan koneksi saat menambah data.');
+      }
+      throw err; // Lempar balik agar form mengetahui request gagal
+    }
   };
 
-  fetchVehicles();
-}, []);
+  // 3. Handler untuk DELETE data kendaraan
+  const handleDeleteVehicle = async (id: string) => {
+    try {
+      await axios.delete(`https://rent-car-pkl.linkbee.id/api/vehicles/${id}`, {
+        headers: {
+          Authorization: `Bearer ${ADMIN_TOKEN}`,
+        },
+      });
 
-  const handleAddVehicle = (newVehicle: Vehicle) => {
-    setVehicles((prev) => [newVehicle, ...prev]);
+      // Re-fetch otomatis setelah berhasil DELETE
+      await fetchVehicles();
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response) {
+        const message = err.response.data?.message || 'Gagal menghapus kendaraan.';
+        alert(`Gagal: ${message}`);
+      } else {
+        alert('Terjadi kesalahan koneksi saat menghapus data.');
+      }
+    }
   };
 
   return (
@@ -41,16 +84,16 @@ useEffect(() => {
       <div className="max-w-7xl mx-auto">
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Sistem Manajemen Rent Car</h1>
-          <p className="text-gray-600 mt-1">Kelola dan pantau seluruh armada kendaraan secara terpusat.</p>
+          <p className="text-gray-600 mt-1">Kelola dan pantau seluruh armada kendaraan secara real-time.</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Kolom Kiri: Form */}
+          {/* Form Tambah */}
           <div className="lg:col-span-1">
-            <VehicleForm onAddVehicle={handleAddVehicle} />
+            <VehicleForm onSubmitForm={handleAddVehicle} />
           </div>
 
-          {/* Kolom Kanan: Daftar Katalog Kendaraan */}
+          {/* Catalog / Grid */}
           <div className="lg:col-span-2 space-y-4">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Katalog Kendaraan</h2>
 
@@ -77,7 +120,11 @@ useEffect(() => {
             {!isLoading && !error && vehicles.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {vehicles.map((item) => (
-                  <VehicleCard key={item.id} vehicle={item} />
+                  <VehicleCard
+                    key={item.id}
+                    vehicle={item}
+                    onDelete={handleDeleteVehicle}
+                  />
                 ))}
               </div>
             )}
