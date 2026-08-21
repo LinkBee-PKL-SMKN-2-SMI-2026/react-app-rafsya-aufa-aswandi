@@ -1,49 +1,42 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '../api/api';
+import { type Vehicle } from '../types/vehicle';
+import { VehicleCard } from '../components/VehicleCard';
 import axios from 'axios';
-import { type Vehicle } from '../types/vehicle'; // Sesuaikan path jika perlu
-import { VehicleCard } from '../components/VehicleCard'; // Sesuaikan path jika perlu
-
-const ADMIN_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI5ODc0NmQyMC1lZTZjLTQzMjUtYWEwOC1lYzg2N2IxODM0ZmUiLCJlbWFpbCI6ImFkbWluQHJlbnRjYXIuY29tIiwiaWF0IjoxNzg2Njg5NDA3LCJleHAiOjE3ODY2OTAzMDd9.kG9ERfjO8TGlgROOdHIh_RdcOlN-IxFoaZXzo4zf_QE";
-
 const VehicleList = () => {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchVehicles = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await axios.get('https://rent-car-pkl.linkbee.id/api/vehicles');
-      const resultData = Array.isArray(response.data) ? response.data : (response.data?.data || []);
-      setVehicles(resultData);
-    } catch {
-      setError('Gagal mengambil data kendaraan dari server. Silakan coba lagi.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // 1. Refactor GET menggunakan useQuery (menggantikan useState, useEffect, dan useCallback)
+  const { data: vehicles = [], isLoading, isError, error: queryError } = useQuery<Vehicle[]>({
+    queryKey: ['vehicles'],
+    queryFn: async () => {
+      const response = await api.get('/vehicles');
+      // Menyesuaikan dengan struktur data API Anda
+      return Array.isArray(response.data) ? response.data : (response.data?.data || []);
+    },
+  });
 
-  useEffect(() => {
-    fetchVehicles();
-  }, [fetchVehicles]);
-
-  const handleDeleteVehicle = async (id: string) => {
-    try {
-      await axios.delete(`https://rent-car-pkl.linkbee.id/api/vehicles/${id}`, {
-        headers: {
-          Authorization: `Bearer ${ADMIN_TOKEN}`,
-        },
-      });
-      await fetchVehicles(); // Re-fetch otomatis setelah berhasil DELETE
-    } catch (err: unknown) {
+  // 2. Refactor DELETE menggunakan useMutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await api.delete(`/vehicles/${id}`);
+    },
+    onSuccess: () => {
+      // Wajib panggil invalidateQueries agar list kendaraan otomatis diperbarui di background
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+    },
+    onError: (err: unknown) => {
       if (axios.isAxiosError(err) && err.response) {
         const message = err.response.data?.message || 'Gagal menghapus kendaraan.';
         alert(`Gagal: ${message}`);
       } else {
         alert('Terjadi kesalahan koneksi saat menghapus data.');
       }
-    }
+    },
+  });
+
+  const handleDeleteVehicle = (id: string) => {
+    deleteMutation.mutate(id);
   };
 
   return (
@@ -59,20 +52,22 @@ const VehicleList = () => {
         </div>
       )}
 
-      {error && (
+      {isError && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
           <p className="font-semibold">Terjadi Kesalahan!</p>
-          <p className="text-sm">{error}</p>
+          <p className="text-sm">
+            {queryError instanceof Error ? queryError.message : 'Gagal mengambil data kendaraan dari server. Silakan coba lagi.'}
+          </p>
         </div>
       )}
 
-      {!isLoading && !error && vehicles.length === 0 && (
+      {!isLoading && !isError && vehicles.length === 0 && (
         <div className="text-center p-8 bg-white rounded-xl border border-gray-100 text-gray-500">
           Belum ada data kendaraan yang tersedia.
         </div>
       )}
 
-      {!isLoading && !error && vehicles.length > 0 && (
+      {!isLoading && !isError && vehicles.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {vehicles.map((item) => (
             <VehicleCard

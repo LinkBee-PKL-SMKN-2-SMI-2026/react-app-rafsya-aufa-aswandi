@@ -1,32 +1,44 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import {type VehicleFormData } from '../types/vehicle';
+import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '../api/api';
+import { type VehicleFormData } from '../types/vehicle';
 
-interface VehicleFormProps {
-  onSubmitForm: (data: VehicleFormData) => Promise<void>;
-}
-
-export const VehicleForm: React.FC<VehicleFormProps> = ({ onSubmitForm }) => {
+export default function VehicleAdd() {
   const {
     register,
     handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<VehicleFormData>({
     defaultValues: {
       transmission: 'AUTOMATIC',
-      // Gunakan ID kategori default/hardcoded yang valid dari database API
+      
       categoryId: '39a7b75a-e7c6-4d2a-89a3-d1f56b9c9f01',
     },
   });
 
-  const onSubmit = async (data: VehicleFormData) => {
-    try {
-      await onSubmitForm(data);
-      reset(); // Reset form jika sukses
-    } catch {
-      // Error penanganan ditangani oleh fungsi induk di App.tsx
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // Refactor POST menggunakan useMutation
+  const mutation = useMutation({
+    mutationFn: async (newData: VehicleFormData) => {
+      return await api.post('/vehicles', newData);
+    },
+    onSuccess: () => {
+      // Wajib panggil invalidateQueries agar list kendaraan diperbarui
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      navigate('/vehicles');
+    },
+    onError: (err: any) => {
+      const message = err.response?.data?.message || 'Gagal menyimpan kendaraan baru.';
+      alert(`Gagal: ${message}`);
     }
+  });
+
+  const onSubmit = (data: VehicleFormData) => {
+    mutation.mutate(data);
   };
 
   return (
@@ -83,7 +95,7 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({ onSubmitForm }) => {
             {...register('categoryId', { required: 'Pilih kategori' })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
           >
-            {/* Opsi statis kategori UUID dari server */}
+
             <option value="39a7b75a-e7c6-4d2a-89a3-d1f56b9c9f01">SUV / MPV</option>
             <option value="f8c1a123-4567-89ab-cdef-0123456789ab">Sedan</option>
           </select>
@@ -92,14 +104,14 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({ onSubmitForm }) => {
 
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={mutation.isPending}
           className={`w-full text-white font-medium py-2.5 px-4 rounded-lg transition duration-200 mt-2 ${
-            isSubmitting
+            mutation.isPending
               ? 'bg-indigo-400 cursor-not-allowed'
               : 'bg-indigo-600 hover:bg-indigo-700'
           }`}
         >
-          {isSubmitting ? 'Menyimpan...' : 'Simpan Kendaraan'}
+          {mutation.isPending ? 'Menyimpan...' : 'Simpan Kendaraan'}
         </button>
       </form>
     </div>
